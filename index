@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>精選相片挑選與投票系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 圖示庫 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 質感微滾動條 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* 卡片選取發光效果 */
+    .card-selected {
+      border-color: #0284c7 !important;
+      box-shadow: 0 0 0 2px #0284c7, 0 10px 25px -5px rgba(2, 132, 199, 0.25) !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans selection:bg-brand-500 selection:text-white pb-32">
+
+  <!-- 頂部導航列 -->
+  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-sky-400 flex items-center justify-center text-white shadow-sm">
+          <i class="fa-solid fa-camera-retro text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 leading-none">PhotoPicker</h1>
+          <span class="text-xs text-slate-500">照片挑選與票選系統</span>
+        </div>
+      </div>
+
+      <!-- 右側快速功能 -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- 快速跳轉至原 SurveyMonkey -->
+        <a href="https://www.surveymonkey.com/r/3VHTXN2" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs sm:text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm">
+          <i class="fa-solid fa-arrow-up-right-from-square text-slate-400"></i>
+          <span class="hidden sm:inline">開啟原</span><span>SurveyMonkey</span>
+        </a>
+
+        <!-- 打開 Google Drive 資料夾 -->
+        <a href="https://drive.google.com/drive/folders/1cKPk39aVvFGvrPu20NEJ6a-6mF6ufvIH" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs sm:text-sm font-medium text-amber-800 hover:bg-amber-100 transition shadow-sm">
+          <i class="fa-brands fa-google-drive text-amber-600"></i>
+          <span class="hidden sm:inline">瀏覽雲端硬碟</span>
+        </a>
+
+        <!-- 匯入 / 新增相片按鈕 -->
+        <button onclick="toggleModal('addPhotoModal')" 
+                class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium transition shadow-sm">
+          <i class="fa-solid fa-plus"></i>
+          <span>新增相片</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 flex-grow w-full">
+    
+    <!-- 標題與說明卡片 -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 mb-8 relative overflow-hidden">
+      <div class="absolute -right-8 -bottom-8 opacity-5 text-slate-800 pointer-events-none">
+        <i class="fa-solid fa-images text-9xl"></i>
+      </div>
+      <div class="max-w-3xl">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-50 text-brand-700 mb-3 border border-brand-100">
+          <i class="fa-regular fa-circle-check mr-1.5"></i> 照片投票選拔活動
+        </span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+          挑選你最喜愛的照片
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+          歡迎瀏覽雲端硬碟中上傳的精選相片。點選卡片或核取方塊即可將喜歡的照片加入挑選清單，亦可點擊放大鏡預覽高畫質細節。選取完成後，在下方填寫您的稱呼並送出即可！
+        </p>
+      </div>
+    </div>
+
+    <!-- 篩選、搜尋與操作列 -->
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
+      <!-- 標籤分類過濾 -->
+      <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0" id="categoryFilters">
+        <button onclick="filterCategory('all')" data-cat="all" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 text-white shadow-sm transition">
+          全部照片 (<span id="count-all">0</span>)
+        </button>
+        <button onclick="filterCategory('風景')" data-cat="風景" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition">
+          風景
+        </button>
+        <button onclick="filterCategory('人物')" data-cat="人物" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition">
+          人物
+        </button>
+        <button onclick="filterCategory('活動')" data-cat="活動" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition">
+          活動記錄
+        </button>
+      </div>
+
+      <!-- 關鍵字搜尋與批次操作 -->
+      <div class="flex items-center space-x-2">
+        <div class="relative flex-grow sm:flex-grow-0 sm:w-64">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" id="searchInput" oninput="handleSearch()" placeholder="搜尋編號、標題或備註..." 
+                 class="w-full pl-9 pr-4 py-2 rounded-xl text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition">
+        </div>
+        <button onclick="toggleSelectAll()" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition shadow-sm whitespace-nowrap" title="全選/取消全選">
+          <i class="fa-solid fa-check-double mr-1 text-slate-400"></i><span id="selectAllBtnText">全選</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 照片網格區域 -->
+    <div id="photoGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <!-- 卡片由 JavaScript 動態生成渲染 -->
+    </div>
+
+    <!-- 查無結果提示 -->
+    <div id="emptyState" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
+      <i class="fa-regular fa-image text-4xl text-slate-300 mb-3"></i>
+      <p class="text-slate-500 font-medium">沒有符合條件的相片</p>
+      <p class="text-xs text-slate-400 mt-1">請嘗試變更搜尋關鍵字或分類標籤</p>
+    </div>
+
+  </main>
+
+  <!-- 懸浮底部操作列 (Sticky Bottom Bar) -->
+  <div class="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 shadow-xl z-30 transition-transform duration-300">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+      
+      <!-- 選取計數器與預覽簡述 -->
+      <div class="flex items-center justify-between w-full sm:w-auto space-x-3">
+        <div class="flex items-center space-x-3">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-brand-50 text-brand-600 font-bold text-sm border border-brand-100">
+            <span id="selectedBadgeCount">0</span>
+          </span>
+          <div>
+            <div class="text-sm font-bold text-slate-900">
+              已選擇 <span id="selectedCountText" class="text-brand-600">0</span> 張照片
+            </div>
+            <div class="text-xs text-slate-400 truncate max-w-xs" id="selectedIdPreview">
+              尚未選取任何相片
+            </div>
+          </div>
+        </div>
+
+        <!-- 手機版重設按鈕 -->
+        <button onclick="clearSelection()" class="text-xs text-slate-400 hover:text-rose-500 transition sm:hidden">
+          清空
+        </button>
+      </div>
+
+      <!-- 送出與操作按鈕 -->
+      <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+        <button onclick="clearSelection()" class="hidden sm:inline-flex px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+          清空選取
+        </button>
+        <button onclick="openSubmitModal()" class="flex-grow sm:flex-grow-0 inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-md shadow-brand-500/20 active:scale-95 transition">
+          <i class="fa-regular fa-paper-plane"></i>
+          <span>確認送出選拔</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 彈出燈箱：大圖預覽 (Lightbox Modal) -->
+  <div id="lightboxModal" class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <button onclick="toggleModal('lightboxModal')" class="absolute top-4 right-4 text-white/80 hover:text-white text-2xl p-2 z-10 transition">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div class="max-w-5xl max-h-[90vh] flex flex-col items-center">
+      <img id="lightboxImg" src="" alt="預覽大圖" class="max-h-[75vh] w-auto max-w-full rounded-lg object-contain shadow-2xl">
+      <div class="mt-4 text-center text-white">
+        <h3 id="lightboxTitle" class="text-lg font-bold"></h3>
+        <p id="lightboxDesc" class="text-xs text-slate-300 mt-1"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗：新增照片 (支援 Google Drive 連結轉直連) -->
+  <div id="addPhotoModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+          <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i>
+          <span>新增相片至清單</span>
+        </h3>
+        <button onclick="toggleModal('addPhotoModal')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">相片名稱 / 編號 *</label>
+          <input type="text" id="newPhotoName" placeholder="例如：IMG_0088 或 聚餐大合照" 
+                 class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">照片網址或 Google Drive 連結 *</label>
+          <input type="text" id="newPhotoUrl" placeholder="貼上 Google Drive 共享網址或一般圖片 URL" 
+                 class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <p class="text-[11px] text-slate-400 mt-1 leading-tight">
+            * 支援貼上 Google Drive 檔案連結（請確認雲端檔案已開啟「知道連結的使用者皆可查看」）。
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">分類</label>
+            <select id="newPhotoCategory" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+              <option value="活動">活動記錄</option>
+              <option value="風景">風景</option>
+              <option value="人物">人物</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">備註說明</label>
+            <input type="text" id="newPhotoDesc" placeholder="可選填" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end space-x-3">
+        <button onclick="toggleModal('addPhotoModal')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">取消</button>
+        <button onclick="handleAddNewPhoto()" class="px-5 py-2 text-xs font-semibold bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-md transition">確認新增</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗：送出確認與結果導出 (Submit Modal) -->
+  <div id="submitModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+          <i class="fa-solid fa-square-check text-emerald-600"></i>
+          <span>完成挑選並送出</span>
+        </h3>
+        <button onclick="toggleModal('submitModal')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <!-- 填寫者資訊 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">您的姓名 / 暱稱 *</label>
+            <input type="text" id="userNameInput" placeholder="請填寫姓名" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Email 或聯絡方式</label>
+            <input type="text" id="userContactInput" placeholder="選填，方便主辦方對照" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">補充備註</label>
+          <input type="text" id="userNotesInput" placeholder="例如：希望 IMG_002 幫忙修圖" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <!-- 挑選摘要預覽 -->
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div class="text-xs font-semibold text-slate-600 flex justify-between items-center mb-1">
+            <span>已挑選相片編號清單：</span>
+            <span class="text-brand-600 font-bold" id="modalSelectedCount">0 張</span>
+          </div>
+          <div class="text-xs text-slate-700 font-mono bg-white p-2.5 rounded-lg border border-slate-200 max-h-24 overflow-y-auto break-all" id="modalSelectedItemsList">
+            無
+          </div>
+        </div>
+
+        <div class="bg-sky-50 text-sky-800 text-xs p-3 rounded-xl border border-sky-100 flex items-start space-x-2">
+          <i class="fa-solid fa-circle-info mt-0.5 text-sky-500"></i>
+          <div>
+            點擊「複製文字結果」可直接傳給負責人或貼入 SurveyMonkey；點擊「完成送出」即可留存本機投票紀錄。
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap items-center justify-end gap-2">
+        <button onclick="copyResultsToClipboard()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center space-x-1.5">
+          <i class="fa-regular fa-copy"></i>
+          <span id="copyBtnText">複製結果文字</span>
+        </button>
+        <button onclick="downloadResultsText()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-download"></i>
+          <span>匯出 TXT 檔</span>
+        </button>
+        <button onclick="confirmSubmitSurvey()" class="px-5 py-2 text-xs font-semibold bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-md transition">
+          完成投票送出
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成功送出提示訊息框 (Toast) -->
+  <div id="toastMessage" class="fixed top-20 right-4 z-50 hidden bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-3 transition-opacity">
+    <i class="fa-solid fa-check text-emerald-400"></i>
+    <span class="text-xs sm:text-sm font-medium" id="toastText">操作成功</span>
+  </div>
+
+  <script>
+    // 預設展示照片資料庫 (含優質攝影圖庫展示，並支援擴充雲端硬碟中的照片)
+    const initialPhotos = [
+      {
+        id: "PHOTO-001",
+        title: "日暮海岸線",
+        category: "風景",
+        desc: "黃昏時分的金黃夕陽與浪花",
+        url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-002",
+        title: "雪山晨曦",
+        category: "風景",
+        desc: "清晨第一道晨光灑在覆雪山稜",
+        url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-003",
+        title: "活動歡聚特寫",
+        category: "活動",
+        desc: "聚會交流熱鬧時刻，自然笑容瞬間",
+        url: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-004",
+        title: "都會夜色掠影",
+        category: "風景",
+        desc: "車水馬龍的城市流光夜景",
+        url: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-005",
+        title: "陽光森林漫步",
+        category: "人物",
+        desc: "在林間微光中漫步的愜意背影",
+        url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-006",
+        title: "慶功大合照",
+        category: "活動",
+        desc: "團隊成果發表會後的歡慶團照",
+        url: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-007",
+        title: "秋楓小徑",
+        category: "風景",
+        desc: "落葉滿地、楓紅如火的秋日意象",
+        url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "PHOTO-008",
+        title: "工作坊專案討論",
+        category: "活動",
+        desc: "全神貫注進行創意思考討論的紀錄",
+        url: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80"
+      }
+    ];
+
+    // 狀態變數
+    let photos = [...initialPhotos];
+    let selectedPhotoIds = new Set();
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    // 初始化頁面
+    window.addEventListener('DOMContentLoaded', () => {
+      renderPhotos();
+      updateCategoryCounts();
+      updateSelectionUI();
+    });
+
+    // 轉換 Google Drive 分享連結為直接可展示的圖片網址
+    function transformGoogleDriveUrl(url) {
+      if (!url) return '';
+      // 匹配 /d/檔案ID 或 id=檔案ID
+      const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        // 使用 Google Drive 直連檢視格式
+        return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+      }
+      return url;
+    }
+
+    // 渲染相片網格
+    function renderPhotos() {
+      const grid = document.getElementById('photoGrid');
+      const emptyState = document.getElementById('emptyState');
+      grid.innerHTML = '';
+
+      const filtered = photos.filter(p => {
+        const matchCategory = (currentCategory === 'all' || p.category === currentCategory);
+        const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            p.desc.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchCategory && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      filtered.forEach(photo => {
+        const isSelected = selectedPhotoIds.has(photo.id);
+        const card = document.createElement('div');
+        card.className = `group relative bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm transition-all duration-200 cursor-pointer flex flex-col ${
+          isSelected ? 'card-selected' : 'hover:shadow-md hover:border-slate-300'
+        }`;
+        card.onclick = (e) => {
+          // 避免點擊燈箱放大按鈕時誤觸選取
+          if (e.target.closest('.preview-btn')) return;
+          toggleSelectPhoto(photo.id);
+        };
+
+        card.innerHTML = `
+          <!-- 圖片容器 -->
+          <div class="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden">
+            <img src="${photo.url}" alt="${photo.title}" 
+                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                 onerror="this.src='https://placehold.co/600x400/e2e8f0/64748b?text=照片載入失敗'">
+            
+            <!-- 選取 Checkbox 角標 -->
+            <div class="absolute top-3 left-3 z-10">
+              <div class="w-6 h-6 rounded-lg flex items-center justify-center transition ${
+                isSelected ? 'bg-brand-600 text-white shadow' : 'bg-black/30 backdrop-blur-sm text-transparent border border-white/50'
+              }">
+                <i class="fa-solid fa-check text-xs"></i>
+              </div>
+            </div>
+
+            <!-- 分類標籤 -->
+            <div class="absolute bottom-3 left-3 z-10">
+              <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-black/50 backdrop-blur-md text-white">
+                ${photo.category}
+              </span>
+            </div>
+
+            <!-- 燈箱放大按鈕 -->
+            <button class="preview-btn absolute top-3 right-3 z-10 w-8 h-8 rounded-lg bg-black/40 hover:bg-black/70 backdrop-blur-sm text-white flex items-center justify-center transition"
+                    title="點擊放大預覽" onclick="openLightbox('${photo.url}', '${photo.title}', '${photo.desc}')">
+              <i class="fa-solid fa-expand text-xs"></i>
+            </button>
+          </div>
+
+          <!-- 說明資訊 -->
+          <div class="p-3.5 flex flex-col justify-between flex-grow">
+            <div>
+              <div class="flex items-center justify-between text-xs text-slate-400 font-mono mb-1">
+                <span>#${photo.id}</span>
+                ${isSelected ? '<span class="text-brand-600 font-semibold font-sans">已勾選</span>' : ''}
+              </div>
+              <h4 class="font-bold text-slate-800 text-sm leading-snug line-clamp-1">${photo.title}</h4>
+              <p class="text-xs text-slate-500 mt-1 line-clamp-1">${photo.desc || '無備註'}</p>
+            </div>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+
+      // 更新分類計數
+      updateCategoryCounts();
+    }
+
+    // 切換單張相片選取
+    function toggleSelectPhoto(id) {
+      if (selectedPhotoIds.has(id)) {
+        selectedPhotoIds.delete(id);
+      } else {
+        selectedPhotoIds.add(id);
+      }
+      renderPhotos();
+      updateSelectionUI();
+    }
+
+    // 全選 / 取消全選
+    function toggleSelectAll() {
+      const allCurrentIds = photos.map(p => p.id);
+      if (selectedPhotoIds.size === photos.length) {
+        selectedPhotoIds.clear();
+      } else {
+        allCurrentIds.forEach(id => selectedPhotoIds.add(id));
+      }
+      renderPhotos();
+      updateSelectionUI();
+    }
+
+    // 清空選取
+    function clearSelection() {
+      selectedPhotoIds.clear();
+      renderPhotos();
+      updateSelectionUI();
+      showToast('已清空所有選取的相片');
+    }
+
+    // 更新底部計數器與介面
+    function updateSelectionUI() {
+      const count = selectedPhotoIds.size;
+      document.getElementById('selectedBadgeCount').innerText = count;
+      document.getElementById('selectedCountText').innerText = count;
+
+      const selectAllBtnText = document.getElementById('selectAllBtnText');
+      selectAllBtnText.innerText = (selectedPhotoIds.size === photos.length && photos.length > 0) ? '取消全選' : '全選';
+
+      const previewText = document.getElementById('selectedIdPreview');
+      if (count === 0) {
+        previewText.innerText = '尚未選取任何相片';
+      } else {
+        const sortedIds = Array.from(selectedPhotoIds).join(', ');
+        previewText.innerText = sortedIds;
+      }
+    }
+
+    // 分類篩選
+    function filterCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.getAttribute('data-cat') === cat) {
+          btn.className = "cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 text-white shadow-sm transition";
+        } else {
+          btn.className = "cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition";
+        }
+      });
+      renderPhotos();
+    }
+
+    // 關鍵字搜尋
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value.trim();
+      renderPhotos();
+    }
+
+    // 更新各分類計數標記
+    function updateCategoryCounts() {
+      const countAll = document.getElementById('count-all');
+      if (countAll) countAll.innerText = photos.length;
+    }
+
+    // 打開燈箱大圖
+    function openLightbox(url, title, desc) {
+      document.getElementById('lightboxImg').src = url;
+      document.getElementById('lightboxTitle').innerText = title;
+      document.getElementById('lightboxDesc').innerText = desc || '';
+      toggleModal('lightboxModal');
+    }
+
+    // Modal 彈窗開關控制
+    function toggleModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    // 新增自訂照片
+    function handleAddNewPhoto() {
+      const nameInput = document.getElementById('newPhotoName');
+      const urlInput = document.getElementById('newPhotoUrl');
+      const catInput = document.getElementById('newPhotoCategory');
+      const descInput = document.getElementById('newPhotoDesc');
+
+      const name = nameInput.value.trim();
+      let rawUrl = urlInput.value.trim();
+      const category = catInput.value;
+      const desc = descInput.value.trim();
+
+      if (!name) {
+        showToast('請填寫相片名稱或編號');
+        return;
+      }
+      if (!rawUrl) {
+        showToast('請提供圖片網址或 Google Drive 連結');
+        return;
+      }
+
+      // 自動解析轉成直連
+      const directUrl = transformGoogleDriveUrl(rawUrl);
+      const newId = `P-${String(photos.length + 1).padStart(3, '0')}`;
+
+      photos.unshift({
+        id: newId,
+        title: name,
+        category: category,
+        desc: desc || '手動匯入相片',
+        url: directUrl
+      });
+
+      // 自動勾選新加的這張
+      selectedPhotoIds.add(newId);
+
+      // 清空欄位並關閉視窗
+      nameInput.value = '';
+      urlInput.value = '';
+      descInput.value = '';
+      toggleModal('addPhotoModal');
+
+      renderPhotos();
+      updateSelectionUI();
+      showToast(`已成功新增相片 #${newId}`);
+    }
+
+    // 打開送出確認彈窗
+    function openSubmitModal() {
+      if (selectedPhotoIds.size === 0) {
+        showToast('請至少挑選一張照片再送出！');
+        return;
+      }
+
+      document.getElementById('modalSelectedCount').innerText = `${selectedPhotoIds.size} 張`;
+      document.getElementById('modalSelectedItemsList').innerText = Array.from(selectedPhotoIds).join(', ');
+      toggleModal('submitModal');
+    }
+
+    // 生成回報文字字串
+    function generateReportText() {
+      const name = document.getElementById('userNameInput').value.trim() || '未填寫稱呼';
+      const contact = document.getElementById('userContactInput').value.trim() || '無';
+      const notes = document.getElementById('userNotesInput').value.trim() || '無';
+      const selectedList = Array.from(selectedPhotoIds).join(', ');
+
+      return `【挑選照片問卷投票回條】\n` +
+             `-------------------------\n` +
+             `投票人姓名：${name}\n` +
+             `聯絡方式：${contact}\n` +
+             `挑選相片數量：共 ${selectedPhotoIds.size} 張\n` +
+             `挑選之相片編號：\n${selectedList}\n` +
+             `備註需求：${notes}\n` +
+             `-------------------------\n` +
+             `送出時間：${new Date().toLocaleString('zh-TW')}`;
+    }
+
+    // 複製選取結果至剪貼簿 (避免 iFrame 限制使用 execCommand)
+    function copyResultsToClipboard() {
+      const text = generateReportText();
+      const tempTextArea = document.createElement("textarea");
+      tempTextArea.value = text;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      try {
+        document.execCommand('copy');
+        const btnText = document.getElementById('copyBtnText');
+        btnText.innerText = "已複製成功！";
+        setTimeout(() => { btnText.innerText = "複製結果文字"; }, 2500);
+        showToast('挑選清單已成功複製到剪貼簿！');
+      } catch (err) {
+        showToast('複製失敗，請手動複製文字');
+      }
+      document.body.removeChild(tempTextArea);
+    }
+
+    // 下載結果文字檔案
+    function downloadResultsText() {
+      const text = generateReportText();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `照片挑選名單_${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('已匯出結果文字檔');
+    }
+
+    // 送出投票並完成
+    function confirmSubmitSurvey() {
+      const name = document.getElementById('userNameInput').value.trim();
+      if (!name) {
+        showToast('請務必填寫您的姓名/暱稱！');
+        return;
+      }
+
+      toggleModal('submitModal');
+      showToast(`感謝 ${name}！已成功記錄您的挑選結果。`);
+    }
+
+    // 提示 Toast 訊息
+    function showToast(msg) {
+      const toast = document.getElementById('toastMessage');
+      const toastText = document.getElementById('toastText');
+      toastText.innerText = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
